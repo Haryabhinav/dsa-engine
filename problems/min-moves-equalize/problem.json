@@ -1,0 +1,39 @@
+{
+  "slug": "min-moves-equalize",
+  "title": "Minimum Moves to Equalize",
+  "statement": "Given n integers (k is ignored), output the minimum total number of unit increments/decrements needed to make all values equal.",
+  "n_max": 200000,
+  "time_limit_ms": 2000,
+  "ops_budget": 400000000,
+  "required_complexity": "n log n",
+  "solution_family": [
+    "greedy",
+    "sortings",
+    "math"
+  ],
+  "concepts": [
+    {
+      "id": "sorting",
+      "centrality": 0.8
+    },
+    {
+      "id": "greedy-exchange",
+      "centrality": 0.8
+    },
+    {
+      "id": "arrays-indexing",
+      "centrality": 0.4
+    }
+  ],
+  "edge_cases": [
+    "empty",
+    "single",
+    "all_duplicates",
+    "negatives",
+    "max_values"
+  ],
+  "shrink_hint": {
+    "kind": "int_array",
+    "header_lines": 1
+  }
+}

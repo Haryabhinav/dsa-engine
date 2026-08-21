@@ -1,0 +1,35 @@
+# Two things live here: the runner image (built, not run as a service — the
+# orchestrator starts one container per execution) and Postgres for deployment.
+services:
+  runner:
+    build: .
+    image: dsa-runner:latest
+    profiles: ["build-only"]
+    network_mode: none
+    read_only: true
+    mem_limit: 256m
+    pids_limit: 64
+    cpus: 1.0
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    user: "65534:65534"
+    tmpfs: ["/tmp:rw,size=64m,noexec"]
+
+  # SQLite is correct below one app host. Postgres is REQUIRED above it, because
+  # SQLite is a file and two application servers cannot safely share one.
+  # Switch with:  export DSA_DATABASE_URL=postgresql://dsa:dsa@localhost:5432/dsa
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dsa
+      POSTGRES_PASSWORD: dsa
+      POSTGRES_DB: dsa
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dsa"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:

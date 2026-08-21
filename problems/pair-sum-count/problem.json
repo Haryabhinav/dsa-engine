@@ -1,0 +1,39 @@
+{
+  "slug": "pair-sum-count",
+  "title": "Count Pairs With Given Sum",
+  "statement": "Given n integers and a target k, count index pairs (i<j) with a[i]+a[j]==k.",
+  "n_max": 200000,
+  "time_limit_ms": 2000,
+  "ops_budget": 400000000,
+  "required_complexity": "n",
+  "solution_family": [
+    "hashing",
+    "counting"
+  ],
+  "concepts": [
+    {
+      "id": "hash-lookup",
+      "centrality": 0.9
+    },
+    {
+      "id": "pair-counting",
+      "centrality": 0.6
+    },
+    {
+      "id": "duplicate-handling",
+      "centrality": 0.7
+    }
+  ],
+  "edge_cases": [
+    "empty",
+    "single",
+    "all_duplicates",
+    "max_values",
+    "negatives",
+    "self_pair"
+  ],
+  "shrink_hint": {
+    "kind": "int_array",
+    "header_lines": 1
+  }
+}

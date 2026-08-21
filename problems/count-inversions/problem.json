@@ -1,0 +1,38 @@
+{
+  "slug": "count-inversions",
+  "title": "Count Inversions",
+  "statement": "Count pairs (i<j) with a[i] > a[j].",
+  "n_max": 100000,
+  "time_limit_ms": 2000,
+  "ops_budget": 400000000,
+  "required_complexity": "n log n",
+  "solution_family": [
+    "divide-conquer",
+    "merge-sort"
+  ],
+  "concepts": [
+    {
+      "id": "merge-sort",
+      "centrality": 0.9
+    },
+    {
+      "id": "divide-conquer",
+      "centrality": 0.8
+    },
+    {
+      "id": "comparison-operators",
+      "centrality": 0.5
+    }
+  ],
+  "edge_cases": [
+    "empty",
+    "single",
+    "sorted",
+    "reverse_sorted",
+    "all_same"
+  ],
+  "shrink_hint": {
+    "kind": "int_array",
+    "header_lines": 1
+  }
+}

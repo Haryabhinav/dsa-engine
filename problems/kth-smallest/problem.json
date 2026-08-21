@@ -1,0 +1,38 @@
+{
+  "slug": "kth-smallest",
+  "title": "K-th Smallest Element",
+  "statement": "Given n integers and k, output the k-th smallest value (1-indexed). If k>n output 0.",
+  "n_max": 200000,
+  "time_limit_ms": 2000,
+  "ops_budget": 400000000,
+  "required_complexity": "n log n",
+  "solution_family": [
+    "sortings",
+    "implementation"
+  ],
+  "concepts": [
+    {
+      "id": "sorting",
+      "centrality": 0.9
+    },
+    {
+      "id": "comparison-operators",
+      "centrality": 0.5
+    },
+    {
+      "id": "arrays-indexing",
+      "centrality": 0.5
+    }
+  ],
+  "edge_cases": [
+    "empty",
+    "single",
+    "all_duplicates",
+    "negatives",
+    "max_values"
+  ],
+  "shrink_hint": {
+    "kind": "int_array",
+    "header_lines": 1
+  }
+}

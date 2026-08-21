@@ -1,0 +1,38 @@
+{
+  "slug": "longest-unique-substring",
+  "title": "Longest Substring Without Repeats",
+  "statement": "Given a lowercase string, return the length of the longest substring with all distinct characters.",
+  "n_max": 200000,
+  "time_limit_ms": 2000,
+  "ops_budget": 400000000,
+  "required_complexity": "n",
+  "solution_family": [
+    "two-pointers",
+    "hashing"
+  ],
+  "concepts": [
+    {
+      "id": "two-pointers",
+      "centrality": 0.9
+    },
+    {
+      "id": "hash-lookup",
+      "centrality": 0.6
+    },
+    {
+      "id": "loop-invariants",
+      "centrality": 0.7
+    }
+  ],
+  "edge_cases": [
+    "empty",
+    "single",
+    "all_same",
+    "all_distinct",
+    "max_values"
+  ],
+  "shrink_hint": {
+    "kind": "string",
+    "header_lines": 1
+  }
+}

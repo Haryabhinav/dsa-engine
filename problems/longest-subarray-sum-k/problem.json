@@ -1,0 +1,39 @@
+{
+  "slug": "longest-subarray-sum-k",
+  "title": "Longest Subarray With Sum Exactly K",
+  "statement": "Given n integers and k, output the length of the longest contiguous subarray whose sum is exactly k, or 0.",
+  "n_max": 200000,
+  "time_limit_ms": 2000,
+  "ops_budget": 400000000,
+  "required_complexity": "n",
+  "solution_family": [
+    "data structures",
+    "prefix sums",
+    "implementation"
+  ],
+  "concepts": [
+    {
+      "id": "prefix-sums",
+      "centrality": 0.9
+    },
+    {
+      "id": "hash-lookup",
+      "centrality": 0.8
+    },
+    {
+      "id": "loop-invariants",
+      "centrality": 0.5
+    }
+  ],
+  "edge_cases": [
+    "empty",
+    "single",
+    "all_duplicates",
+    "negatives",
+    "max_values"
+  ],
+  "shrink_hint": {
+    "kind": "int_array",
+    "header_lines": 1
+  }
+}

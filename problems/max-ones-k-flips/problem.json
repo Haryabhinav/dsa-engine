@@ -1,0 +1,39 @@
+{
+  "slug": "max-ones-k-flips",
+  "title": "Longest Run of Ones After K Flips",
+  "statement": "Given n values each 0 or 1 and k, output the length of the longest contiguous run of ones achievable by flipping at most k zeros.",
+  "n_max": 200000,
+  "time_limit_ms": 2000,
+  "ops_budget": 400000000,
+  "required_complexity": "n",
+  "solution_family": [
+    "two pointers",
+    "greedy",
+    "implementation"
+  ],
+  "concepts": [
+    {
+      "id": "two-pointers",
+      "centrality": 0.9
+    },
+    {
+      "id": "loop-invariants",
+      "centrality": 0.7
+    },
+    {
+      "id": "range-semantics",
+      "centrality": 0.6
+    }
+  ],
+  "edge_cases": [
+    "empty",
+    "single",
+    "all_duplicates",
+    "negatives",
+    "max_values"
+  ],
+  "shrink_hint": {
+    "kind": "int_array",
+    "header_lines": 1
+  }
+}

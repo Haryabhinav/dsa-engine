@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DSA Diagnosis Engine</title>
+<style>
+  :root{
+    --bg:#fbfbfa; --panel:#fff; --ink:#1c1b19; --ink2:#605c56; --ink3:#8b867e;
+    --line:#e4e1dc; --accent:#2f5d8a; --ok:#2c6e49; --warn:#94620c; --bad:#a33a2c;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+    --bg:#17171a; --panel:#1e1e22; --ink:#e9e7e3; --ink2:#a6a29b; --ink3:#77736c;
+    --line:#31313a; --accent:#8fb8de; --ok:#79c79a; --warn:#dcb66a; --bad:#e08a7c;}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;
+         gap:14px;align-items:center;flex-wrap:wrap}
+  h1{font-size:15px;margin:0;font-weight:650;letter-spacing:-.01em}
+  .sub{color:var(--ink3);font-size:12.5px}
+  select,button,textarea{font:inherit;color:inherit;background:var(--panel);
+       border:1px solid var(--line);border-radius:7px;padding:7px 11px}
+  button{cursor:pointer;font-weight:550}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  main{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);
+       gap:18px;padding:18px 20px;align-items:start}
+  @media(max-width:980px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+        padding:14px 16px}
+  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;
+           color:var(--ink3);margin:0 0 10px;font-weight:600}
+  #editor{position:relative;font-family:var(--mono);font-size:13px}
+  #code{width:100%;height:330px;resize:vertical;font-family:var(--mono);
+        font-size:13px;line-height:1.5;white-space:pre;tab-size:4}
+  .rail{display:flex;flex-direction:column;gap:2px}
+  .stage{display:grid;grid-template-columns:132px 1fr;gap:10px;padding:8px 0;
+         border-bottom:1px dashed var(--line);align-items:start}
+  .stage:last-child{border-bottom:0}
+  .tag{font-size:12px;font-weight:600;color:var(--ink2);padding-top:1px;line-height:1.35}
+  .st{font-size:13px}
+  .st .lbl{font-weight:600}
+  .muted{color:var(--ink2);font-size:12.5px}
+  .pend{color:var(--ink3)} .runn{color:var(--accent)}
+  .good{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+  .kv{font-family:var(--mono);font-size:12px;background:var(--bg);
+      border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-top:6px;
+      white-space:pre-wrap;word-break:break-word}
+  .tierbadge{display:inline-block;font-family:var(--mono);font-size:11px;
+      padding:1px 7px;border-radius:999px;border:1px solid currentColor}
+  .ladder{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+  .rung{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);
+        border-radius:8px;background:var(--bg)}
+  .rung .n{font-family:var(--mono);font-size:11px;color:var(--ink3);width:34px}
+  .rung .what{flex:1;font-size:13px}
+  .rung.open{border-color:var(--accent)}
+  dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);
+         color:var(--ink);max-width:440px;padding:18px}
+  dialog::backdrop{background:#0008}
+  dialog input{width:100%;margin:10px 0 14px;padding:9px 11px;border-radius:7px;
+               border:1px solid var(--line);background:var(--bg);color:inherit;font:inherit}
+  .note{font-size:12px;color:var(--ink3);margin-top:10px;line-height:1.5}
+  details{margin-top:6px}
+  details summary{cursor:pointer;font-size:12px}
+  details .kv{margin-top:6px}
+  table{border-collapse:collapse;font-family:var(--mono);font-size:12px;margin-top:6px}
+  td{padding:2px 12px 2px 0;color:var(--ink2)}
+</style>
+</head>
+<body>
+<header>
+  <h1>DSA Diagnosis Engine</h1>
+  <span class="sub">deterministic first · the model never sees the fix</span>
+  <span style="flex:1"></span>
+  <input id="student" placeholder="your handle" autocomplete="off"
+         title="Identity, not authentication. Your mastery state is kept per handle."
+         style="width:130px">
+  <select id="problem" title="Browse all problems. Normally the scheduler picks for you."></select>
+  <select id="preset" title="Optional. Loads a sample program into the editor for pair-sum-count. Normally you just write your own code.">
+    <option value="">write your own code</option>
+    <option value="selfpair">load demo: one-token bug</option>
+    <option value="quad">load demo: correct but O(n^2)</option>
+    <option value="linear">load demo: correct and O(n)</option>
+  </select>
+  <button class="primary" id="go">Diagnose</button>
+</header>
+
+<main>
+  <section style="display:flex;flex-direction:column;gap:18px">
+  <div class="card" id="todaycard">
+    <h2>Up next</h2>
+    <div id="today" class="muted">Enter a handle to get a recommendation.</div>
+  </div>
+
+  <section class="card">
+    <h2>Submission</h2>
+    <div id="editor"><textarea id="code" spellcheck="false"></textarea></div>
+    <div class="note" id="spannote"></div>
+  </section>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:18px">
+    <div class="card">
+      <h2>What we checked</h2>
+      <div class="rail" id="rail"></div>
+      <div class="note">
+        <span class="pend">·</span> waiting &nbsp;
+        <span class="runn">…</span> running &nbsp;
+        <span class="good">&#10003;</span> passed &nbsp;
+        <span class="bad">&#10007;</span> failed &nbsp;
+        <span class="muted">&ndash;</span> no verdict &mdash; it declined rather than guess
+      </div>
+    </div>
+    <div class="card">
+      <h2>Hint ladder</h2>
+      <div class="ladder" id="ladder"></div>
+      <div class="note">Each rung must be unlocked deliberately, and unlocking asks
+        what you think is wrong first. Locked content is never sent to this page —
+        it is fetched only when you unlock it.</div>
+    </div>
+    <div class="card">
+      <h2>Your retention</h2>
+      <div id="progress" class="muted">No attempts recorded yet.</div>
+      <div class="note"><b>half-life</b> is how long this memory lasts before it
+        needs refreshing — solving multiplies it, failing halves it, so it moves
+        the moment you attempt something. <b>recall now</b> couples current
+        retention through prerequisites: a topic is only as strong as what it
+        rests on. Right after any attempt recall-now is near 1.00 by construction,
+        which is why half-life is the column to watch. Topics you have never met
+        are absent, not weak, so they are not listed and drag nothing down.</div>
+    </div>
+  </section>
+</main>
+
+<dialog id="gate">
+  <div style="font-weight:600;margin-bottom:4px">Before I show you —</div>
+  <div class="muted">what do you think is wrong?</div>
+  <input id="guess" placeholder="e.g. my loop bound is off by one" autocomplete="off">
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button id="cancel">Cancel</button>
+    <button class="primary" id="reveal">Unlock</button>
+  </div>
+</dialog>
+
+<script>
+const PRESETS = {
+ selfpair:`import sys
+
+def main():
+    d = sys.stdin.read().split()
+    n, k = int(d[0]), int(d[1])
+    a = list(map(int, d[2:2 + n]))
+    total = 0
+    for i in range(n):
+        for j in range(n):
+            if i <= j and a[i] + a[j] == k:
+                total += 1
+    print(total)
+
+main()`,
+ quad:`import sys
+
+def main():
+    d = sys.stdin.read().split()
+    n, k = int(d[0]), int(d[1])
+    a = list(map(int, d[2:2 + n]))
+    total = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            if a[i] + a[j] == k:
+                total += 1
+    print(total)
+
+main()`,
+ linear:`import sys
+from collections import Counter
+
+def main():
+    d = sys.stdin.read().split()
+    n, k = int(d[0]), int(d[1])
+    a = list(map(int, d[2:2 + n]))
+    seen, total = Counter(), 0
+    for x in a:
+        total += seen[k - x]
+        seen[x] += 1
+    print(total)
+
+main()`};
+
+// Plain names, and the QUESTION each stage answers, shown before it runs.
+// "S2 Test 42" and "S3 Bisect" are internal codenames; a student reading five
+// cryptic rows and a dot has no idea what is happening or why it is slow. The
+// question is the part that makes the wait legible.
+const STAGES = [
+  ["S0", "Problem check",  "Are the reference solutions trustworthy?"],
+  ["S1", "Sample tests",   "Do the visible examples pass?"],
+  ["S2", "Find a failing case",
+         "Searching random inputs for one where you are wrong, then shrinking it — slowest stage"],
+  ["S3", "Locate the fault", "Where is the defect, and how certain can we be?"],
+  ["S4", "Speed",          "Is it fast enough for the required bound?"],
+];
+const RUNGS = [
+  [0, "Name the concept",   "which idea this problem is really testing"],
+  [1, "Point me at it",     "roughly where to look"],
+  [2, "Show the failing case", "the smallest input that breaks it"],
+  [3, "What kind of mistake",  "the category of error, still not the fix"],
+];
+
+const $ = s => document.querySelector(s);
+let RUN = null, TIER_STATE = {};
+
+// ESCAPE EVERYTHING THAT CAME FROM A PROGRAM'S OUTPUT.
+// A crashed submission reports its actual output as "<Traceback ...>", and that
+// leading "<" opened an HTML tag: the browser swallowed the traceback and left a
+// stray ">" on screen, so the student saw an EMPTY "yours" field (BUILD_LOG F40).
+// Student stdout/stderr is untrusted text, not markup, and it must never reach
+// innerHTML unescaped.
+const esc = v => String(v == null ? "" : v)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const MARKS = {
+  pend: ["·",  "pend", "waiting"],
+  runn: ["…",  "runn", "running"],
+  pass: ["✓",  "good", "passed"],
+  fail: ["✕",  "bad",  "failed"],
+  none: ["–",  "muted","no verdict"],
+};
+
+function drawRail(state){
+  $("#rail").innerHTML = STAGES.map(([id,name,question])=>{
+    const s = state[id] || {status:"pending"};
+    // Three outcomes, not two. S3 and S4 report a CONFIDENCE TIER, not a
+    // pass/fail, and they send no `ok` -- so the old two-way test rendered a
+    // green tick on "STRUCTURAL" and on "INCONCLUSIVE", which reads as "all
+    // good" for what is really "I could not determine anything" (F40).
+    const key = s.status!=="done" ? (s.status==="running"?"runn":"pend")
+              : s.ok===false ? "fail" : s.ok===true ? "pass" : "none";
+    const [mark, cls, word] = MARKS[key];
+    // Before a stage has a result, show what it is going to ask. That is the
+    // difference between "· " and knowing why you are waiting.
+    const line = s.headline
+      ? `<span class="lbl"> ${s.headline}</span>`
+      : `<span class="muted"> ${esc(question)}</span>`;
+    return `<div class="stage"><div class="tag">${name}</div>
+      <div class="st"><span class="${cls}" title="${word}">${mark}</span>${line}
+      ${s.body?`<div class="kv">${s.body}</div>`:""}${s.extra||""}</div></div>`;
+  }).join("");
+}
+
+function drawLadder(){
+  $("#ladder").innerHTML = RUNGS.map(([t,what,why])=>{
+    const st = TIER_STATE[t];
+    return `<div class="rung ${st?"open":""}">
+      <div class="n">${st?"●":"🔒"} ${t}</div>
+      <div class="what">${st ? st
+        : `${esc(what)}<div class="muted">${esc(why)}</div>`}</div>
+      ${st?"":`<button data-tier="${t}">Unlock</button>`}</div>`;
+  }).join("");
+  document.querySelectorAll(".rung button").forEach(b=>
+    b.onclick = ()=> askThen(parseInt(b.dataset.tier)));
+}
+
+function askThen(tier){
+  if(!RUN) return;
+  if(tier===0) return fetchHint(tier,"");
+  $("#guess").value=""; $("#gate").showModal();
+  $("#reveal").onclick = ()=>{ const g=$("#guess").value.trim();
+    if(!g) return; $("#gate").close(); fetchHint(tier,g); };
+  $("#cancel").onclick = ()=> $("#gate").close();
+}
+
+async function fetchHint(tier,guess){
+  const r = await fetch("/api/hint",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({run:RUN,tier,guess})});
+  const j = await r.json();
+  // Show WHICH brain wrote this. A student should be able to tell a live model's
+  // nudge from a deterministic template, and so should I when debugging.
+  const tag = j.source && j.source.startsWith("gemini")
+    ? ` <span class="muted">[${esc(j.source)}]</span>`
+    : ` <span class="muted">[deterministic stub]</span>`;
+  TIER_STATE[tier] = esc(j.text) + tag
+    + (j.fell_back ? " <span class='warn'>(firewall fell back)</span>" : "");
+  drawLadder();
+}
+
+const handle = () => ($("#student").value || "").trim();
+
+// The scheduler chooses the problem and SAYS WHY. "Practise this" is an
+// instruction; "array indexing has decayed to 0.05 and 10 later topics build on
+// it" is a reason the student can disagree with, which is the difference between
+// a tutor and a task list.
+async function loadNext(){
+  const h = handle();
+  if(!h){ $("#today").innerHTML = `<span class="muted">Enter a handle to get a recommendation.</span>`; return; }
+  try{
+    const r = await fetch(`/api/next?student=${encodeURIComponent(h)}`);
+    if(!r.ok){ $("#today").innerHTML = `<span class="warn">${esc((await r.json()).detail||"bad handle")}</span>`; return; }
+    const d = await r.json();
+    const p = d.problem;
+    if(!p){ $("#today").innerHTML = `<span class="muted">${esc(d.reason)}</span>`; return; }
+    const dueRows = (d.due||[]).map(x =>
+      `<tr><td>${esc(x.name)}</td><td>${x.retention.toFixed(2)}</td>`
+      + `<td>${x.lifts_n ? esc(x.lifts_n)+" build on it" : ""}</td></tr>`).join("");
+    $("#today").innerHTML =
+      `<div style="font-weight:600">${esc(p.title)} <span class="muted">· required `
+      + `Θ(${esc(p.required)})</span></div>`
+      + `<div class="muted" style="margin:4px 0 8px">${esc(d.reason)}</div>`
+      + `<button id="startit" class="primary">Work on this</button>`
+      + (dueRows ? `<table style="margin-top:10px">${dueRows}</table>` : "");
+    $("#startit").onclick = () => {
+      $("#problem").value = p.slug;
+      $("#code").value = "";
+      $("#code").focus();
+    };
+  }catch(e){ $("#today").innerHTML = `<span class="warn">${esc(String(e))}</span>`; }
+}
+
+async function loadProgress(){
+  const h = handle();
+  if(!h) return;
+  try{
+    const r = await fetch(`/api/progress?student=${encodeURIComponent(h)}`);
+    if(!r.ok) return;
+    const d = await r.json();
+    if(!d.concepts.length){
+      $("#progress").innerHTML = `<span class="muted">No attempts recorded yet.</span>`; return;
+    }
+    $("#progress").innerHTML =
+      `<div class="muted">${d.attempts} attempt${d.attempts===1?"":"s"} · `
+      + `${d.passed} solved · ${d.failed} failed</div>`
+      + `<table style="margin-top:6px"><tr><td class="muted">topic</td>`
+      + `<td class="muted">half-life</td><td class="muted">recall now</td></tr>`
+      + d.concepts.map(c => {
+          // Half-life is the honest headline: recall-now is ~1.00 straight after
+          // any attempt, pass or fail, so on its own it reads as mastery.
+          const weak = c.half_life_days <= 1.5;
+          return `<tr><td>${esc(c.name)}</td>`
+            + `<td class="${weak?"bad":""}">${c.half_life_days} d</td>`
+            + `<td>${c.effective.toFixed(2)}</td></tr>`;
+        }).join("")
+      + `</table>`;
+  }catch(e){}
+}
+
+async function go(){
+  TIER_STATE = {}; drawLadder(); $("#spannote").textContent="";
+  const state = {}; drawRail(state);
+  const r = await fetch("/api/diagnose",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({problem:"problems/"+$("#problem").value,
+                         code:$("#code").value, ext:".py",
+                         student:handle()||null})});
+  RUN = (await r.json()).run;
+  const es = new EventSource("/api/stream?run="+RUN);
+  es.onmessage = e => {
+    const d = JSON.parse(e.data);
+    if(d.stage==="recorded"){
+      // The attempt has been folded into the student's mastery state. Refresh the
+      // panels that depend on it, so the loop is VISIBLE rather than implied.
+      const bits = [];
+      if(d.blamed) bits.push(`decayed <b>${esc(d.blamed)}</b> on proven-fault evidence`);
+      else if(d.recorded) bits.push(`recorded against ${d.recorded.length} topic`
+                                    + `${d.recorded.length===1?"":"s"}`);
+      if(bits.length) $("#spannote").innerHTML +=
+        `<div class="muted" style="margin-top:6px">${d.solved?"Solved":"Attempt"} `
+        + `${bits.join(", ")}.</div>`;
+      loadProgress(); loadNext(); return;
+    }
+    if(d.stage==="done"){ es.close(); return; }
+    const s = state[d.stage] = state[d.stage]||{};
+    s.status = d.status; if(d.ok!==undefined) s.ok=d.ok;
+    // Progress events carry a stage and a status -- and NO result fields. The
+    // renderers below read result fields unconditionally, so a "running" event
+    // printed "undefined mutation sites" and "k = undefined" for the whole of
+    // S3 and S4: the longest, most-watched stages (BUILD_LOG F25). Results are
+    // rendered ONLY from the terminal event; progress says it is working.
+    if(d.status==="running"){
+      s.headline = d.detail || `<span class="muted">working…</span>`;
+      drawRail(state); return;
+    }
+    if(d.stage==="S0") s.headline = esc(d.detail);
+    if(d.stage==="S1") s.headline = esc(d.detail);
+    if(d.stage==="S2"){
+      const crashed = d.kind === "runtime_error";
+      s.headline = crashed
+        ? `<span class="tierbadge bad">CRASHED</span> on this input`
+        : (d.chain ? `shrunk ${esc(d.chain)}` : esc(d.detail||""));
+      if(d.input) s.body = crashed
+        // A crash has no output to compare, so "yours / expected" is the wrong
+        // frame entirely -- it invites the student to hunt for a wrong number
+        // when the program never produced one.
+        ? `input     ${esc(d.input)}\nyour run  ${esc(d.actual).replace(/^&lt;|&gt;$/g,"")}`
+        : `input     ${esc(d.input)}\nyours     ${esc(d.actual)}\nexpected  ${esc(d.expected)}`;
+    }
+    if(d.stage==="S3"){
+      if(d.skipped){ s.headline = esc(d.detail); drawRail(state); return; }
+      const col = d.tier==="PROVEN"?"good":d.tier==="LOCALIZED"?"warn":"muted";
+      s.headline = `<span class="tierbadge ${col}">${esc(d.tier)}</span>`;
+      s.ok = d.tier==="PROVEN" ? true : undefined;   // a tier is not a pass
+      s.body = `${d.sites} mutation sites · ${d.tried} tried after coverage pruning`;
+      if(d.tier==="PROVEN"){ s.body += `\ndefect proven at line ${d.line}`;
+        $("#spannote").innerHTML = `<span class="good">PROVEN</span> — changing one token on `+
+          `line ${d.line} makes every test pass, and that was re-checked on fresh inputs the `+
+          `search had never seen. The repair itself is never sent to this page.`; }
+      else if(d.tier==="LOCALIZED"){ s.body += `\nlikely within lines ${d.band.join(", ")}`;
+        $("#spannote").innerHTML = `<span class="warn">LOCALIZED</span> — a guess at a band of `+
+          `lines, not a proof. Measured accuracy is only about 1 in 6, so treat this as `+
+          `&ldquo;nothing was proven&rdquo; rather than as a location.`; }
+      else $("#spannote").innerHTML = `<span class="muted">STRUCTURAL — no single token fixes `+
+        `this, so the approach itself is what needs rethinking. Pointing at a line would be a `+
+        `guess, so it will not.</span>`;
+    }
+    if(d.stage==="S4"){
+      if(d.skipped){ s.headline = esc(d.detail); drawRail(state); return; }
+      // JUDGE VERDICT AS THE HEADLINE. What a contest judge would say survives
+      // machine noise; a fitted exponent does not. The millisecond table was the
+      // wrong thing to lead with -- a reader cannot evaluate six numbers, and
+      // when the machine is busy they look broken even when the verdict is right.
+      const j = d.judge || {};
+      const secs = ms => (ms/1000).toFixed(2) + " s";
+      s.ok = !!j.ok;
+      s.headline = j.timed_out
+        ? `<span class="tierbadge bad">TOO SLOW</span> did not finish at n=${esc(j.n)} `
+          + `(limit ${secs(j.limit_ms)})`
+        : j.ok
+          ? `finishes in ${secs(j.ms)} at n=${esc(j.n)} <span class="muted">(limit `
+            + `${secs(j.limit_ms)})</span>`
+          : `<span class="tierbadge bad">TOO SLOW</span> ${secs(j.ms)} at n=${esc(j.n)}, `
+            + `limit is ${secs(j.limit_ms)}`;
+      const lines = [];
+      lines.push(d.band ? `growth looks ${esc(d.band)}`
+                        : `growth class could not be determined`
+                          + (d.noise > 0.25 ? ` (machine too busy to time reliably)` : ""));
+      lines.push(`required: Θ(${esc(d.required)})`);
+      s.body = lines.join("\n");
+      // Raw timings are EVIDENCE, not a headline: available on demand, never in
+      // the reader's face.
+      const pts = d.points || [];
+      if(pts.length){
+        s.extra = `<details><summary class="muted">show measurements</summary>`
+          + `<div class="kv">` + (pts.length >= 3 ? `exponent k = ${esc(d.k)} ± ${esc(d.ci)}\n` : "")
+          + esc(pts.map(p=>`n=${String(p[0]).padEnd(8)}${p[1]} ms`).join("\n"))
+          + `</div></details>`;
+      }
+    }
+    drawRail(state);
+  };
+}
+
+(async ()=>{
+  const ps = await (await fetch("/api/problems")).json();
+  $("#problem").innerHTML = ps.map(p=>`<option>${p}</option>`).join("");
+  $("#code").value = "";
+  $("#code").placeholder = [
+    "Write your solution here.",
+    "",
+    "Read all input from stdin, print only the answer.",
+    "Input format: a first line 'n k', then n integers.",
+    "",
+    "(The dropdown above is optional - it just loads a demo program.)"
+  ].join("\n");
+  $("#preset").onchange = e => {
+    if (e.target.value) $("#code").value = PRESETS[e.target.value];
+  };
+  $("#go").onclick = go;
+  const saved = localStorage.getItem("dsa_student") || "";
+  $("#student").value = saved;
+  $("#student").onchange = () => {
+    localStorage.setItem("dsa_student", handle());
+    loadNext(); loadProgress();
+  };
+  drawRail({}); drawLadder();
+  if(saved){ loadNext(); loadProgress(); }
+})();
+</script>
+</body>
+</html>
